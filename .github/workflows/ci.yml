@@ -1,0 +1,29 @@
+name: Basic CI Pipeline
+
+on: 
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Asentaa Docker Buildx -työkalun, joka mahdollistaa tehokkaammat buildit
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Rakentaa Docker-imagen ja tagittaa sen
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./flask_weather_service # Mistä hakemistosta buildataan (projektin juuri)
+          file: ./flask_weather_service/Dockerfile # Dockerfile-tiedoston sijainti
+          push: false # Tärkeää: EI yritetä pushata imagea mihinkään rekisteriin tässä vaiheessa
+          # Tagitetaan image esim. commitin tunnisteella uniikkiuden varmistamiseksi
+          tags: weather_microservice:${{ github.sha }}
+          # Voitaisiin lisätä myös esim. latest-tagi: tags: weather_microservice:latest, weather_microservice:${{ github.sha }}
