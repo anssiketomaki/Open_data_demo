@@ -1,0 +1,29 @@
+services:
+  service:
+    build: 
+      context: ./flask_microservice_for_API
+      dockerfile: Dockerfile.flask
+    env_file:
+      - ./flask_microservice_for_API/.env
+    environment:
+      - PORT:5001
+    ports:
+      - "5001:5001"
+    networks:
+      - grid-net
+
+  client:
+    build: 
+      context: ./the_app
+      dockerfile: Dockerfile.app
+    environment:
+      - SERVICE_URL=http://service:5001/data
+    networks:
+      - grid-net
+    depends_on:
+      - service
+    stdin_open: true 
+    tty: true
+
+networks:
+  grid-net:
