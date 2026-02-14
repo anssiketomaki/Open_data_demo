@@ -12,6 +12,7 @@ DATASETS = {
     "p": "https://data.fingrid.fi/api/datasets/74/data", # production
     "c": "https://data.fingrid.fi/api/datasets/124/data", # consumption
 }
+MAX_DAYS = 100
 API_KEY = os.getenv("FINGRID_API_KEY")
 
 def previous_full_quarter(dt=None):
@@ -36,8 +37,8 @@ def get_data():
     if dataset_type not in DATASETS:
         return jsonify({"error": "Invalid dataset type. Use 'p' or 'c'."}), 400
 
-    if days < 0 or days > 364:
-        return jsonify({"error": "Days out of range (0-364)"}), 400
+    if days < 0 or days > MAX_DAYS:
+        return jsonify({"error": f"Days out of range (0-{MAX_DAYS})"}), 400
 
     try:
         raw = fetch_raw_data(DATASETS[dataset_type], days)
@@ -48,24 +49,57 @@ def get_data():
         return jsonify({"error": str(e)}), 500
 
 def aggregate(data_points, days):
-    # Strategy: Always return a list of {label, value}
-    # If viewing 1 day: Aggregate by Hour
-    # If viewing > 1 day: Aggregate by Day
+    """
+    Aggregate/reduce data points to help visualizing the data 
     
+    :param data_points: Fetched db datapoints
+    :param days: Query parameter of period length
+    """
+
+    if not data_points:
+        return []
+
+    # Helper to parse time
+    def parse_time(t_str):
+        return datetime.fromisoformat(t_str.replace("Z", "+00:00"))
+
     grouped = defaultdict(list)
     
-    for item in data_points:
-        dt = datetime.fromisoformat(item["startTime"].replace("Z", "+00:00"))
-        
-        if days <= 1:
-            # Group by Hour:HH
+    # --- GROUPING STRATEGY ---
+    if days == 0:
+        # Strategy: "Today" -> Group by Hour
+        # Format: HH:00
+        for item in data_points:
+            dt = parse_time(item["startTime"])
             key = dt.strftime("%H:00")
-        else:
-            # Group by Date: YYYY-MM-DD
+            grouped[key].append(item["value"])
+
+    elif days <= 3:
+        # Strategy: 1-3 Days -> Group by Hour (or 2-hour blocks if needed)
+        # Format: Day HH:00
+        for item in data_points:
+            dt = parse_time(item["startTime"])
+            key = dt.strftime("%d %H:00")
+            grouped[key].append(item["value"])
+
+    elif days <= 60:
+        # Strategy: 4-60 Days -> Group by Day
+        # Format: YYYY-MM-DD
+        for item in data_points:
+            dt = parse_time(item["startTime"])
             key = dt.strftime("%Y-%m-%d")
+            grouped[key].append(item["value"])
+            
+    else:
+        # Strategy: >60 Days -> Group by Week (ISO Week) to prevent 200 bars
+        # Format: YYYY-Wxx
+        for item in data_points:
+            dt = parse_time(item["startTime"])
+            # Format as "2024-W05"
+            key = f"{dt.year}-W{dt.isocalendar()[1]:02d}"
+            grouped[key].append(item["value"])
 
-        grouped[key].append(item["value"])
-
+    # Calculate Averages
     result = []
     for key, values in grouped.items():
         avg = sum(values) / len(values)
@@ -74,7 +108,7 @@ def aggregate(data_points, days):
             "value": avg
         })
     
-    # Sort by label to ensure time continuity in plot
+    # Sort alphabetically by label so the graph flows left-to-right correctly
     return sorted(result, key=lambda x: x['label'])
 
 def fetch_raw_data(data_url, days):
@@ -92,13 +126,16 @@ def fetch_raw_data(data_url, days):
         "format": "json",
         "locale": "en",
         "sortBy": "startTime",
-        "sortOrder": "asc",
+        "sortOrder": "desc",
+        "pageSize": 20000,
     }
     
     response = requests.get(data_url, headers=headers, params=params)
     response.raise_for_status()
     data = response.json()
-    return data.get("data", [])
+    items = data.get("data", [])
+    items.reverse()
+    return items
 
 if __name__ == "__main__":
     # Get port from args or env, default to 5001
