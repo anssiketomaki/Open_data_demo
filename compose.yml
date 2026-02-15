@@ -4,7 +4,8 @@ services:
       context: ./flask_microservice_for_API
       dockerfile: Dockerfile.flask
     env_file:
-      - ./flask_microservice_for_API/.env
+      - path: ./flask_microservice_for_API/.env
+        required: false
     environment:
       - PORT:5001
     ports:

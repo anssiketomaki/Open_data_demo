@@ -22,7 +22,9 @@ jobs:
           context: ./flask_microservice_for_API
           file: ./flask_microservice_for_API/Dockerfile.flask
           push: false 
-          tags: weather_microservice:${{ github.sha }}
+          tags: |
+            flask_service:latest
+            flask_service:${{ github.sha }}
 
       - name: Build app's Docker image
         uses: docker/build-push-action@v5
@@ -30,7 +32,9 @@ jobs:
           context: ./the_app
           file: ./the_app/Dockerfile.app 
           push: false 
-          tags: weather_microservice:${{ github.sha }}
+          tags: |
+            UI_app:latest
+            UI_app:${{ github.sha }}
   
   integration-test:
     runs-on: ubuntu-latest
@@ -43,6 +47,8 @@ jobs:
 
       - name: Start services
         run: docker compose up -d
+        env:
+          FINGRID_API_KEY: ${{ secrets.FINGRID_API_KEY }}
 
       - name: Wait for services
         run: sleep 10
