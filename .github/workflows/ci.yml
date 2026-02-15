@@ -22,9 +22,6 @@ jobs:
           context: ./flask_microservice_for_API
           file: ./flask_microservice_for_API/Dockerfile.flask
           push: false 
-          tags: |
-            flask_service:latest
-            flask_service:${{ github.sha }}
 
       - name: Build app's Docker image
         uses: docker/build-push-action@v5
@@ -32,9 +29,6 @@ jobs:
           context: ./the_app
           file: ./the_app/Dockerfile.app 
           push: false 
-          tags: |
-            UI_app:latest
-            UI_app:${{ github.sha }}
   
   integration-test:
     runs-on: ubuntu-latest
