@@ -1,20 +1,22 @@
-import sys
 import requests
 import shutil
 
-# This points to the service container name defined in compose.yml
 SERVICE_URL = "http://service:5001/data"
 MAX_DAYS = 100
 
 def print_ascii_chart(data):
+    """
+    Creates an ascii_chart from fetched data
+    
+    :param data: Fetched data from the Fingrid API
+    """
     if not data:
         print("No data to plot.")
         return
 
     terminal_width = shutil.get_terminal_size((80, 20)).columns
     
-    # NEW: Capping the bar width to 1/3 of the screen or 30 chars
-    # This makes the chart much "cleaner" and easier to read.
+    # Capping the bar width to 1/3 of the screen or 30 chars
     label_width = 15 
     value_width = 10
     max_bar_width = min(30, int(terminal_width * 0.4)) 
@@ -32,14 +34,17 @@ def print_ascii_chart(data):
         fraction = val / max_val if max_val > 0 else 0
         bar_len = int(fraction * max_bar_width)
         
-        # Use a slightly lighter bar character for a "thinner" feel
-        # or stick to '█' but with the shorter max_bar_width
         bar = '█' * bar_len
             
         print(f"{label:<{label_width}} | {bar:<{max_bar_width}} {val:>8.0f}")
     print("-" * (label_width + max_bar_width + value_width + 3))
 
-def parse_input(user_input):
+def parse_input(user_input: str):
+    """
+    Checks and validates the user input commands
+    
+    :param user_input: user input commad
+    """
     user_input = user_input.strip().lower()
     if user_input == 'q':
         return 'q', 0
@@ -63,8 +68,13 @@ def parse_input(user_input):
     return dataset, days
 
 def ui():
+    """
+    CMD ui
+    """
+
     print("--- Fingrid Open Data CLI ---")
     print("Commands: [p/c][days] (e.g., 'p0' = production today, 'c6' = consumption past week)")
+    print("Database unit: MWh/h | Shown data = calculated averages from the 15min resolution in db.")
     print("Type 'q' to quit.")
 
     while True:
@@ -76,7 +86,7 @@ def ui():
                 print("Bye!")
                 break
 
-            print(f"Fetching data for '{dataset}' over {days} days...")
+            print(f"Fetching data for '{dataset}' over {days+1} days...")
             
             response = requests.get(
                 SERVICE_URL, 

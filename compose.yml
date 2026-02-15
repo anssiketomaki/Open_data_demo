@@ -13,6 +13,7 @@ services:
       - grid-net
 
   client:
+    profiles: ["cli"]
     build: 
       context: ./the_app
       dockerfile: Dockerfile.app

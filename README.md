@@ -1,40 +1,69 @@
 # Open_data_demo
-Python app that uses open data API to fetch data and present it for the user. Simple app.
+Full Python app that fetches and shows data for user. Used on commanline. Uses Fingrid open data API to fetch data. Made as a weekly task for University course.
 
+# App structure
+```
+Open_data_demo/
+├── compose.yml   # Multi-container build structure
+├── .gitignore    # (Optional) To hide .env and __pycache__
+│
+├── flask_microservice_for_API/ # SERVICE CONTAINER
+│   ├── service.py          # Flask API logic & Fingrid fetching
+│   ├── Dockerfile.flask    
+│   ├── requirements.txt
+│   └── .env                # FINGRID_API_KEY="your_key"
+│
+└── the_app/                # CLIENT CONTAINER
+    ├── app.py              # Interactive CLI & ASCII Plotter
+    ├── Dockerfile.app      
+    └── requirements.txt
+```
 
+# Prerequisites
 
+1) Have Docker and Docker Compose installed. Or on windows have docker desktop installed and launched.
 
-This project was first just a microservice that was completed as a weekly coursework for University course. I made a container and CI/CD for it later.
+2) .env file in ./flask_microservice_for_API/ containing
+```
+    FINGRID_API_KEY="your_key_in_quotes"
+```
 
+Where to get API-key for the Fingrid API:
 
-# To run the application locally in Docker
-
-0) Get your own API-key for the Fingrid API:
     - The database: https://data.fingrid.fi/
     - Instructions: https://data.fingrid.fi/instructions
 
-1) Create a `.env` file in the `flask_microservice_for_api` folder and add your Fingrid API key:
-    FINGRID_API_KEY="here_is_your_apikey_in_doublequotes"
+# Run the application locally in Docker
 
-2) Install Docker Desktop on your computer and make sure it is running.
+1) Open a terminal (or Command Prompt) to the project root folder, where there is the compose.yml-file present
 
-3) Open a terminal (or Command Prompt) to the project root folder, where there is the compose.yml-file present
+2) Build and start the data-fetching service in the background with
+```
+    docker compose up -d
+```
 
-4) Build project in Docker using the following command (2 containers):
-    docker compose up
+3) Run the UI in the command line with:
+```
+    docker compose run --rm client
+```
 
-5) Run the Docker container with the following command:
-    docker run -p 5000:5000 flask-weather-service
+4) Fetch and view data: Supported range is today (0) plus max 75 days (= 76 days) to ensure the smooth operation of the app.
+- Choose either c (consumption) or p (production)
+- Choose how far back you would like to see:
+    - 0 = last day
+    - Additional numbers add days before today -> e.g. 6 = past week
+- Combine the parameters to a command e.g. p0, c75,..
 
-6) The app should now be running inside the Docker container and accessible at port 5000 on your local machine. 
-   You can use the microservice via browser or other tools (like `curl`) by accessing localhost at port 5000.
-   For example:
-       http://localhost:5000/weather?city=tampere
+## Teardown
+You can stop running containers from cmd at project root with
+```
+    docker compose down
+```
 
 
-# The Databases used in the app
-1) OpenWeatherMap Geocoding API
-    - for fetching the latitude and longitude of the user-given cityname
+# The Datasets used in the app
+1) FINGRID Open Data: Electricity consumption in Finland
+    - https://data.fingrid.fi/en/datasets/124
 
-2) OpenWeatherMap Current weather data API
-    - for fetching the most recent measured weather data from the user determined location
+2) FINGRID Open Data: Electricity production in Finland
+    - https://data.fingrid.fi/en/datasets/74

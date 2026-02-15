@@ -3,7 +3,6 @@ from datetime import datetime, timezone, timedelta
 from collections import defaultdict
 import os
 import requests
-import sys
 
 app = Flask(__name__)
 
@@ -12,10 +11,16 @@ DATASETS = {
     "p": "https://data.fingrid.fi/api/datasets/74/data", # production
     "c": "https://data.fingrid.fi/api/datasets/124/data", # consumption
 }
-MAX_DAYS = 100
+MAX_DAYS = 75
 API_KEY = os.getenv("FINGRID_API_KEY")
 
 def previous_full_quarter(dt=None):
+    """
+    Returns the datetime of the last full quarter of an hour
+    
+    :param dt: Datetime startingpoint
+    """
+
     if dt is None:
         dt = datetime.now(timezone.utc)
     minute = (dt.minute // 15) * 15
@@ -26,6 +31,9 @@ def previous_full_quarter(dt=None):
 
 @app.route('/data', methods=['GET'])
 def get_data():
+    """
+    Orchestrates data fetching process from the API
+    """
     dataset_type = request.args.get("type")
     days_param = request.args.get("days", "0")
     
@@ -44,6 +52,13 @@ def get_data():
         raw = fetch_raw_data(DATASETS[dataset_type], days)
         processed = aggregate(raw, days)
         return jsonify({"data": processed})
+    
+    except requests.exceptions.HTTPError as e:
+        # Check if Fingrid rejected the key
+        if e.response.status_code in [401, 403]:
+            return jsonify({"error": "Fingrid API rejected the request. Is your API_KEY set correctly in the .env file?"}), 401
+        return jsonify({"error": f"Fingrid API Error: {str(e)}"}), 502
+    
     except Exception as e:
         app.logger.error(f"Error: {e}")
         return jsonify({"error": str(e)}), 500
@@ -112,6 +127,12 @@ def aggregate(data_points, days):
     return sorted(result, key=lambda x: x['label'])
 
 def fetch_raw_data(data_url, days):
+    """
+    Fetch the raw data from the set api
+    
+    :param data_url: dataset url to fetch data from
+    :param days: amount of days for which to fetch data
+    """
     end_time = previous_full_quarter()
     start_time = end_time - timedelta(days=days)
 
