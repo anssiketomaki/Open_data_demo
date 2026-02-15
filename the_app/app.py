@@ -71,10 +71,11 @@ def ui():
     """
     CMD ui
     """
-
+    print("\n\n")
     print("--- Fingrid Open Data CLI ---")
     print("Commands: [p/c][days] (e.g., 'p0' = production today, 'c6' = consumption past week)")
     print("Database unit: MWh/h | Shown data = calculated averages from the 15min resolution in db.")
+    print("App time = UTC+0")
     print("Type 'q' to quit.")
 
     while True:
