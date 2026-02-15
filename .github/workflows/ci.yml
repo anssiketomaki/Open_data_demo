@@ -13,17 +13,42 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Asentaa Docker Buildx -työkalun, joka mahdollistaa tehokkaammat buildit
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # Rakentaa Docker-imagen ja tagittaa sen
-      - name: Build Docker image
+      - name: Build API's Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ./flask_weather_service # Mistä hakemistosta buildataan (projektin juuri)
-          file: ./flask_weather_service/Dockerfile # Dockerfile-tiedoston sijainti
-          push: false # Tärkeää: EI yritetä pushata imagea mihinkään rekisteriin tässä vaiheessa
-          # Tagitetaan image esim. commitin tunnisteella uniikkiuden varmistamiseksi
+          context: ./flask_microservice_for_API
+          file: ./flask_microservice_for_API/Dockerfile.flask
+          push: false 
           tags: weather_microservice:${{ github.sha }}
-          # Voitaisiin lisätä myös esim. latest-tagi: tags: weather_microservice:latest, weather_microservice:${{ github.sha }}
+
+      - name: Build app's Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./the_app
+          file: ./the_app/Dockerfile.app 
+          push: false 
+          tags: weather_microservice:${{ github.sha }}
+  
+  integration-test:
+    runs-on: ubuntu-latest
+    needs: test-build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build with Compose
+        run: docker compose build
+
+      - name: Start services
+        run: docker compose up -d
+
+      - name: Wait for services
+        run: sleep 10
+
+      # - name: Run integration test
+      #   run: e.g. curl --fail http://localhost:5000/health
+
+      - name: Shut down
+        run: docker compose down
